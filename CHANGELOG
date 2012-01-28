@@ -1,0 +1,5 @@
+* 1.0.1 release
+
+* Fix crash when nil password is sent
+
+* Initial 1.0.0 release
