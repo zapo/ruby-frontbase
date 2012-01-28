@@ -9,7 +9,7 @@ This is the extension library to access a FrontBase database from Ruby.
 
 - Requirements
 
-  Ruby 1.3.4 or later.
+  Ruby 1.9.1 or later.
   FrontBase 3.x installed.
 
 - How to install ?
