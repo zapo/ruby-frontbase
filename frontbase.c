@@ -1427,7 +1427,7 @@ void Init_frontbase()
    rb_define_const(rb_cFBConn, "ROWS_OK", INT2FIX(FRONTBASE_ROWS_OK));
    rb_define_const(rb_cFBConn, "UNIQUE_OK", INT2FIX(FRONTBASE_UNIQUE_OK));
 
-   rb_define_const(rb_cFBConn, "FB_Undecided", INT2FIX(FB_Undecided));
+   //rb_define_const(rb_cFBConn, "FB_Undecided", INT2FIX(FB_Undecided));
    rb_define_const(rb_cFBConn, "FB_PrimaryKey", INT2FIX(FB_PrimaryKey));
    rb_define_const(rb_cFBConn, "FB_Boolean", INT2FIX(FB_Boolean));
    rb_define_const(rb_cFBConn, "FB_Integer", INT2FIX(FB_Integer));
