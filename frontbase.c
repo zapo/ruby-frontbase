@@ -15,52 +15,10 @@
 #include "/Library/FrontBase/include/FBCAccess/FBCAccess.h"
 #else
 #warning I don't know where FBCAccess.h is installed on non-OSX platforms
-#include "/usr/local/FrontBase/include/FBCAccess.h"
+#include "/usr/local/FrontBase/include/FBCAccess/FBCAccess.h"
 #endif
 
 #pragma mark --- structure definitions ---
-
-/*typedef struct FBCLob
-{
-   unsigned char  kind;               // 0 => direct, 1 => indirect
-   char           handleAsString[28]; // @'<24 hex digits>'\0
-} FBCLob;
-
-typedef union FBCColumn FBCColumn;
-
-union FBCColumn
-{
-   char               tinyInteger;
-   short              shortInteger;
-   int                integer;
-   int                primaryKey;
-   long long          longInteger;
-   unsigned char      boolean;
-   char               character[0x7fffffff];
-   double             numeric;
-   double             real;
-   double             decimal;
-   FBCBitValue        bit;
-   char               date[11];   // YYYY-MM-DD
-   int                unformattedDate;
-   char               time[9];    // HH:MM:SS
-   char               timeTZ[34];   // YYYY-MM-DD HH:MM:SS.sssss+HH:MM
-   char               timestampTZ[34];
-   char               timestamp[28];
-   char               yearMonth[64];    
-   char               dayTime[32];  //  days:hh:ss.ffffff
-   FBCLob             blob;
-   FBCLob             clob;
-   double             rawDate;
-   FBCUnformattedTime rawTime;
-   FBCUnformattedTime rawTimeTZ;
-   FBCUnformattedTime rawTimestamp;
-   FBCUnformattedTime rawTimestampTZ;
-   int                rawYearMonth;
-   double             rawDayTime;
-};
-
-typedef FBCColumn* FBCRow;*/
 
 struct fbsqlconnect
 {
@@ -153,7 +111,7 @@ static VALUE checkMetaData _((FBCDatabaseConnection*, FBCMetaData*));
 static void free_fbconn(ptr) FBSQL_Connect *ptr;
 {
    fbcdcClose(ptr->fbdc);
-   free(ptr); // !!! Change to use Ruby memory functions
+   xfree(ptr);
 }
 
 //
@@ -170,7 +128,7 @@ static void free_fblob(ptr) FBSQL_LOB *ptr;
    }
    ptr->handle = NULL;
    ptr->size = 0;
-   free(ptr); // !!! Change to use Ruby memory functions
+   xfree(ptr);
 }
 
 //
@@ -180,7 +138,7 @@ static void free_fblob(ptr) FBSQL_LOB *ptr;
 static void free_fbresult(ptr) FBSQL_Result *ptr;
 {
     fbcmdRelease(ptr->meta);
-    free(ptr); // !!! Change to use Ruby memory functions
+    xfree(ptr);
 }
 
 #pragma mark -- private helper functions
@@ -246,11 +204,10 @@ static VALUE checkMetaData(conn, meta) FBCDatabaseConnection* conn; FBCMetaData*
         rb_raise(rb_cFBError, "No message");
       }
 
-      free(emg); // !!! Use ruby memory functions
+      xfree(emg);
       fbcemdRelease(emd);
       result = 0;
    }
-   
    return result;
 }
 
@@ -491,7 +448,7 @@ static void fetch_convert_value(FBSQL_Result *result, int column_index, VALUE *r
 static VALUE fbconn_connect(argc, argv, fbconn) int argc; VALUE *argv; VALUE fbconn;
 {
    VALUE arg[7];
-   FBSQL_Connect *conn = malloc(sizeof(FBSQL_Connect)); // !!! Use ruby memory functions
+   FBSQL_Connect *conn = ALLOC(FBSQL_Connect);
    char *session_name = NULL;
    
    conn->port = -1;
@@ -569,10 +526,10 @@ static VALUE fbconn_connect(argc, argv, fbconn) int argc; VALUE *argv; VALUE fbc
    {
       rb_raise(rb_cFBError, fbcdcClassErrorMessage());
    }
-     
-   conn->meta = fbcdcCreateSession(conn->fbdc, session_name, conn->user, conn->password, "system_user");
 
-   if (fbcmdErrorsFound(conn->meta) == T_TRUE)
+   conn->meta = fbcdcCreateSession(conn->fbdc, session_name, conn->user, conn->password, conn->user);
+
+   if (fbcmdErrorsFound(conn->meta))
    {
       FBCErrorMetaData* emd = fbcdcErrorMetaData(conn->fbdc, conn->meta);
       char* msgs = fbcemdAllErrorMessages(emd);
@@ -729,7 +686,7 @@ static VALUE fbconn_rollback(obj) VALUE obj;
 static VALUE fbconn_query(obj, str) VALUE obj, str;
 {
    FBSQL_Connect *conn = get_fbconn(obj);
-   FBSQL_Result *result = malloc(sizeof(FBSQL_Result));
+   FBSQL_Result *result = ALLOC(FBSQL_Result);
    FBCMetaData *meta = NULL;
 
    result->fbdc = conn->fbdc;
@@ -770,7 +727,7 @@ static VALUE fbconn_query(obj, str) VALUE obj, str;
    }
    
    type = fbcmdStatementType(result->md);
-   
+
    if (type != NULL && strcmp("SELECT", type) == 0)
    {
       status = FRONTBASE_ROWS_OK;
@@ -823,6 +780,16 @@ static VALUE fbconn_host(obj) VALUE obj;
    const char *host = fbcdcHostName(get_fbconn(obj)->fbdc);
    if (!host) return Qnil;
    return rb_tainted_str_new2(host);
+}
+
+//
+// FBSQL_Connect#
+//
+
+
+static VALUE fbconn_port(obj) VALUE obj;
+{
+   return NUM2INT(get_fbconn(obj)->port);
 }
 
 //
@@ -1414,6 +1381,7 @@ void Init_frontbase()
    rb_define_method(rb_cFBConn, "rollback", fbconn_rollback, 0);
    rb_define_method(rb_cFBConn, "db", fbconn_db, 0);
    rb_define_method(rb_cFBConn, "host", fbconn_host, 0);
+   rb_define_method(rb_cFBConn, "port", fbconn_port, 0);
    rb_define_method(rb_cFBConn, "status", fbconn_status, 0);
    rb_define_method(rb_cFBConn, "error", fbconn_error, 0);
    rb_define_method(rb_cFBConn, "close", fbconn_close, 0);
