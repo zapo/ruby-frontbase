@@ -529,6 +529,7 @@ static VALUE fbconn_connect(argc, argv, fbconn) int argc; VALUE *argv; VALUE fbc
 
    conn->meta = fbcdcCreateSession(conn->fbdc, session_name, conn->user, conn->password, conn->user);
 
+   
    if (fbcmdErrorsFound(conn->meta))
    {
       FBCErrorMetaData* emd = fbcdcErrorMetaData(conn->fbdc, conn->meta);
@@ -634,6 +635,40 @@ static VALUE fbconn_autocommit(obj, commit) VALUE obj; int commit;
    else
       rb_raise(rb_cFBError, "No connection available");
       
+   return Qnil;
+}
+
+//
+// FBSQL_Connect#
+//
+
+static VALUE fbconn_input_charset(obj, charset) VALUE obj; int charset;
+{
+   FBSQL_Connect *conn = get_fbconn(obj);
+   int fbcharset = NUM2INT(charset);
+
+   if (conn->fbdc) {
+      fbcdcSetInputCharacterSet(conn->fbdc, fbcharset);
+   }
+   else
+      rb_raise(rb_cFBError, "No connection available");
+   return Qnil;
+}
+
+//
+// FBSQL_Connect#
+//
+
+static VALUE fbconn_output_charset(obj, charset) VALUE obj; int charset;
+{
+   FBSQL_Connect *conn = get_fbconn(obj);
+   int fbcharset = NUM2INT(charset);
+
+   if (conn->fbdc) {
+      fbcdcSetOutputCharacterSet(conn->fbdc, fbcharset);
+   }
+   else
+      rb_raise(rb_cFBError, "No connection available");
    return Qnil;
 }
 
@@ -1369,6 +1404,10 @@ void Init_frontbase()
 
    // Constants
    rb_define_const(rb_cFBConn, "NO_CONNECTION", INT2FIX(FB_ERR_NO_CONNECTION));
+   
+   rb_define_const(rb_cFBConn, "FBC_ISO8859_1", INT2FIX(FBC_ISO8859_1));
+   rb_define_const(rb_cFBConn, "FBC_UTF_8", INT2FIX(0));
+   
    rb_define_const(rb_cFBConn, "FB_BINDINGS_VERSION", rb_str_new2(RUBY_BINDINGS_VERSION));
 
    // Instance methods
@@ -1377,6 +1416,8 @@ void Init_frontbase()
 
    rb_define_method(rb_cFBConn, "database_server_info", fbconn_database_server_info, 0);
    rb_define_method(rb_cFBConn, "autocommit", fbconn_autocommit, 1);
+   rb_define_method(rb_cFBConn, "input_charset=", fbconn_input_charset, 1);
+   rb_define_method(rb_cFBConn, "output_charset=", fbconn_output_charset, 1);
    rb_define_method(rb_cFBConn, "commit", fbconn_commit, 0);
    rb_define_method(rb_cFBConn, "rollback", fbconn_rollback, 0);
    rb_define_method(rb_cFBConn, "db", fbconn_db, 0);
