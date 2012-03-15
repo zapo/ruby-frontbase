@@ -1,6 +1,6 @@
 require "mkmf"
 
 dir_config('frontbase')
-have_library('FBCAccess')
+abort 'FBCAccess cant be found' unless have_library('FBCAccess')
 create_makefile("frontbase")
 
